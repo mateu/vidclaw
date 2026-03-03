@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { X, Bot, User, Activity, FileText, AlertCircle, Clock, CheckCircle2, Loader2, MessageCircle } from 'lucide-react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { X, Bot, User, Activity, FileText, AlertCircle, Clock, CheckCircle2, Loader2, MessageCircle, Copy, Check } from 'lucide-react'
 import AttachmentSection from './AttachmentSection'
 import { cn } from '@/lib/utils'
 import { extractFilePaths } from './TaskCard'
@@ -7,6 +7,7 @@ import { useTimezone } from '../TimezoneContext'
 import { useNavigate } from '@tanstack/react-router'
 import MarkdownRenderer from '../Markdown/MarkdownRenderer'
 import { api } from '@/lib/api'
+import { getTaskDisplayState, isErrorState, getDisplayMessage } from '@/lib/taskExecution'
 import type { Task, Attachment, ActivityEntry } from '@/types/api'
 
 function formatTime(iso: string | null | undefined, tz: string): string {
@@ -44,6 +45,7 @@ const ACTION_LABELS: Record<string, string> = {
   task_run: 'Started task',
   task_pickup: 'Picked up task',
   task_completed: 'Completed task',
+  task_cancelled: 'Cancelled task',
   task_deleted: 'Deleted task',
   task_status_check: 'Checked status',
   task_timeout: 'Timed out',
@@ -188,11 +190,29 @@ interface TaskDetailDialogProps {
   task: Task | null
 }
 
+interface RunEntryView {
+  id: string
+  startedAt: string | null
+  completedAt: string | null
+  updatedAt: string | null
+  status: 'queued' | 'in-progress' | 'completed' | 'failed' | 'canceled' | 'timeout'
+  reason: string | null
+  message: string | null
+  result: string | null
+  error: string | null
+  subagentId: string | null
+  sessionId: string | null
+  active?: boolean
+}
+
 export default function TaskDetailDialog({ open, onClose, task }: TaskDetailDialogProps) {
   const { timezone } = useTimezone()
   const navigate = useNavigate()
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [attKey, setAttKey] = useState(0)
+  const [copiedText, setCopiedText] = useState<string | null>(null)
+  const outputRef = useRef<HTMLDivElement | null>(null)
+  const historyRef = useRef<HTMLDivElement | null>(null)
 
   const refreshAttachments = () => {
     if (!task?.id) return
@@ -223,11 +243,89 @@ export default function TaskDetailDialog({ open, onClose, task }: TaskDetailDial
     return () => document.removeEventListener('keydown', handleKey)
   }, [open, onClose])
 
+  const copyToClipboard = async (label: string, text: string | null | undefined) => {
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedText(label)
+      setTimeout(() => setCopiedText(null), 1500)
+    } catch {}
+  }
+
+  const runEntries = useMemo<RunEntryView[]>(() => {
+    if (!task) return []
+
+    const transitionEntries = (task.executionTransitions || []).map((tr, idx) => ({
+      id: `transition-${idx}`,
+      startedAt: tr.at || null,
+      completedAt: tr.at || null,
+      updatedAt: tr.at || null,
+      status: tr.to,
+      reason: tr.reason || null,
+      message: tr.message || null,
+      result: null,
+      error: null,
+      subagentId: tr.subagentId || null,
+      sessionId: tr.subagentId || null,
+      active: tr.to === 'in-progress',
+    }))
+
+    if (transitionEntries.length) {
+      return transitionEntries.sort((a, b) => {
+        const ta = new Date(a.updatedAt || a.startedAt || 0).getTime()
+        const tb = new Date(b.updatedAt || b.startedAt || 0).getTime()
+        return tb - ta
+      })
+    }
+
+    const history = (task.runHistory || []).map((run, idx) => ({
+      id: `history-${idx}`,
+      startedAt: run.startedAt || null,
+      completedAt: run.completedAt || null,
+      updatedAt: run.updatedAt || run.completedAt || null,
+      status: run.status || (run.error ? 'failed' : 'completed'),
+      reason: run.reason || null,
+      message: run.message || run.error || run.result || null,
+      result: run.result || null,
+      error: run.error || null,
+      subagentId: (run as { subagentId?: string | null }).subagentId || null,
+      sessionId: (run as { sessionId?: string | null }).sessionId || null,
+    }))
+
+    if (task.status === 'in-progress' || task.startedAt || task.completedAt || task.result || task.error) {
+      const current: RunEntryView = {
+        id: 'current',
+        startedAt: task.startedAt || null,
+        completedAt: task.completedAt || null,
+        updatedAt: task.updatedAt || null,
+        status: task.status === 'in-progress' ? 'in-progress' : (task.error ? 'failed' : (task.completedAt ? 'completed' : 'queued')),
+        reason: null,
+        message: task.error || task.result || null,
+        result: task.result || null,
+        error: task.error || null,
+        subagentId: task.subagentId || null,
+        sessionId: task.subagentId || null,
+        active: task.status === 'in-progress',
+      }
+      if (!history.length || task.status === 'in-progress' || (task.completedAt && history[history.length - 1]?.completedAt !== task.completedAt)) {
+        history.push(current)
+      }
+    }
+
+    return history.sort((a, b) => {
+      const ta = new Date(a.completedAt || a.updatedAt || a.startedAt || 0).getTime()
+      const tb = new Date(b.completedAt || b.updatedAt || b.startedAt || 0).getTime()
+      return tb - ta
+    })
+  }, [task])
+
   if (!open || !task) return null
 
   const isDone = task.status === 'done'
   const isInProgress = task.status === 'in-progress'
-  const hasError = !!task.error
+  const displayState = getTaskDisplayState(task)
+  const hasError = isErrorState(displayState) || (!displayState && !!task.error)
+  const displayMessage = getDisplayMessage(task, displayState)
   const duration = formatDuration(task.startedAt || task.createdAt, task.completedAt)
   const filePaths = extractFilePaths(task.result)
   const skillsList = task.skills && task.skills.length ? task.skills : (task.skill ? [task.skill] : [])
@@ -278,6 +376,96 @@ export default function TaskDetailDialog({ open, onClose, task }: TaskDetailDial
 
         <div className="flex-1 overflow-hidden min-h-[300px] flex flex-col md:flex-row">
           <div className="w-full md:w-2/3 overflow-y-auto p-5 space-y-4">
+            <div className="rounded-lg border border-border bg-secondary/20 p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Run Details</h3>
+                <div className="flex items-center gap-1.5">
+                  {displayMessage ? (
+                    <button
+                      onClick={() => outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      className="text-[11px] px-2 py-1 rounded bg-secondary hover:bg-accent transition-colors"
+                    >
+                      Jump to output
+                    </button>
+                  ) : null}
+                  <button
+                    onClick={() => historyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="text-[11px] px-2 py-1 rounded bg-secondary hover:bg-accent transition-colors"
+                  >
+                    Jump to activity
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="rounded border border-border/70 bg-background/30 px-2 py-1.5">
+                  <span className="text-muted-foreground">Status</span>
+                  <div className="font-medium mt-0.5">{displayState || task.status}</div>
+                </div>
+                <div className="rounded border border-border/70 bg-background/30 px-2 py-1.5">
+                  <span className="text-muted-foreground">Updated</span>
+                  <div className="font-medium mt-0.5">{formatTime(task.updatedAt, timezone)}</div>
+                </div>
+                <div className="rounded border border-border/70 bg-background/30 px-2 py-1.5">
+                  <span className="text-muted-foreground">Started</span>
+                  <div className="font-medium mt-0.5">{task.startedAt ? formatTime(task.startedAt, timezone) : '—'}</div>
+                </div>
+                <div className="rounded border border-border/70 bg-background/30 px-2 py-1.5">
+                  <span className="text-muted-foreground">Subagent / Session</span>
+                  <div className="font-mono mt-0.5 truncate" title={task.subagentId || ''}>{task.subagentId || '—'}</div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] text-muted-foreground mb-1">Status timeline</p>
+                <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                  {runEntries.length === 0 && <p className="text-[11px] text-muted-foreground">No run events yet</p>}
+                  {runEntries.map((run, idx) => {
+                    const runStatus = run.status
+                    const runDuration = formatDuration(run.startedAt, run.completedAt)
+                    const runOutput = run.message || run.error || run.result
+                    const copyLabel = `run-${run.id}`
+                    return (
+                      <div key={run.id} className="rounded border border-border/70 bg-background/30 px-2 py-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={cn(
+                              'text-[10px] px-1.5 py-0.5 rounded-full border capitalize',
+                              runStatus === 'completed' && 'bg-green-500/10 text-green-400 border-green-500/30',
+                              runStatus === 'failed' && 'bg-red-500/10 text-red-400 border-red-500/30',
+                              runStatus === 'in-progress' && 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+                              runStatus === 'queued' && 'bg-zinc-500/10 text-zinc-400 border-zinc-500/30',
+                              runStatus === 'canceled' && 'bg-orange-500/10 text-orange-400 border-orange-500/30',
+                              runStatus === 'timeout' && 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30',
+                            )}>{runStatus}</span>
+                            <span className="text-[11px] text-muted-foreground">Run {runEntries.length - idx}</span>
+                            {runDuration && <span className="text-[10px] text-green-400">{runDuration}</span>}
+                          </div>
+                          {runOutput && (
+                            <button
+                              onClick={() => copyToClipboard(copyLabel, runOutput)}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-secondary hover:bg-accent transition-colors inline-flex items-center gap-1"
+                              title="Copy run output"
+                            >
+                              {copiedText === copyLabel ? <Check size={10} /> : <Copy size={10} />}
+                              Copy
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-1 text-[10px] text-muted-foreground space-y-0.5">
+                          <p>Started: {run.startedAt ? formatTime(run.startedAt, timezone) : '—'}</p>
+                          <p>Updated: {run.updatedAt ? formatTime(run.updatedAt, timezone) : (run.completedAt ? formatTime(run.completedAt, timezone) : '—')}</p>
+                          {run.reason && <p>Reason: {run.reason}</p>}
+                          {run.message && <p className="line-clamp-2">Message: {run.message}</p>}
+                          <p className="font-mono truncate" title={run.sessionId || run.subagentId || ''}>Session: {run.sessionId || run.subagentId || '—'}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
             {task.description && (
               <div>
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Description</h3>
@@ -285,14 +473,16 @@ export default function TaskDetailDialog({ open, onClose, task }: TaskDetailDial
               </div>
             )}
 
-            {(task.result || task.error) && (
-              <MarkdownRenderer
-                content={(task.error || task.result)!}
-                isError={!!task.error}
-                showToggle={true}
-                size="xs"
-                maxHeight="max-h-64"
-              />
+            {displayMessage && (
+              <div ref={outputRef}>
+                <MarkdownRenderer
+                  content={displayMessage}
+                  isError={hasError}
+                  showToggle={true}
+                  size="xs"
+                  maxHeight="max-h-64"
+                />
+              </div>
             )}
 
             <AttachmentSection
@@ -323,7 +513,7 @@ export default function TaskDetailDialog({ open, onClose, task }: TaskDetailDial
           </div>
 
           <div className="w-full md:w-1/3 border-t md:border-t-0 md:border-l border-border overflow-y-auto">
-            <div className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-muted-foreground border-b border-border">
+            <div ref={historyRef} className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-muted-foreground border-b border-border">
               <Activity size={14} />
               History
             </div>

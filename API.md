@@ -13,7 +13,14 @@ All endpoints are served on `localhost:3333`.
 | POST | `/api/tasks/:id/run` | Mark task for immediate execution |
 | POST | `/api/tasks/:id/pickup` | Mark task as picked up by agent |
 | POST | `/api/tasks/:id/complete` | Mark task as done with result |
+| POST | `/api/tasks/:id/cancel` | Cancel a running task (preserve record/history) |
 | GET | `/api/tasks/queue` | Get executable task queue (sorted by priority) |
+
+`GET /api/tasks/queue` response also includes:
+- `maxConcurrent`, `activeCount`, `remainingSlots`
+- `staleCount` (scheduled tasks already due)
+- `recoveredOrphans` (picked-up tasks auto-returned to queue in this sweep)
+- `recoveredStale` (hard-stale tasks recovered in this sweep)
 
 ## Usage & Models
 

@@ -13,7 +13,7 @@ A secure, self-hosted command center for managing your OpenClaw AI agent.
 - **📁 Content Browser** — Browse workspace files with markdown preview, syntax highlighting, and download.
 - **🧩 Skills Manager** — View all bundled/workspace skills, enable/disable them, create custom skills.
 - **💜 Soul Editor** — Edit SOUL.md, IDENTITY.md, USER.md, AGENTS.md with version history and persona templates.
-- **⚡ Task Execution** — Tasks execute automatically via cron (every 2 min) or heartbeat (every 30 min). Hit "Run Now" for immediate execution.
+- **⚡ Task Execution** — Tasks execute automatically via cron (every 2 min) or heartbeat (every 30 min). Server-side recovery sweeps run every minute to return orphaned pickups to the queue and recover hard-stale runs. Hit "Run Now" for immediate execution.
 
 ## Security
 

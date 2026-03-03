@@ -64,6 +64,7 @@ export const api = {
     reorder: (status: string, order: string[]) =>
       post<{ ok: true }>("/api/tasks/reorder", { status, order }),
     run: (id: string) => post<{ success: true; message: string }>(`/api/tasks/${id}/run`),
+    cancel: (id: string) => post<Task>(`/api/tasks/${id}/cancel`),
     capacity: () => request<Capacity>("/api/tasks/capacity"),
     scheduleToggle: (id: string, enabled?: boolean) =>
       post<Task>(`/api/tasks/${id}/schedule-toggle`, { enabled }),
