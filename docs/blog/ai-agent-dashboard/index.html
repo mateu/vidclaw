@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent Dashboard: Monitor and Control Your AI Assistants in Real-Time</title>
+  <meta name="description" content="Discover what an AI agent dashboard is, why you need one for managing autonomous AI systems, and how VidClaw provides the best self-hosted ai dashboard for real-time monitoring and control.">
+  <link rel="canonical" href="https://vidclaw.com/blog/ai-agent-dashboard/">
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI Agent Dashboard: Monitor and Control Your AI Assistants in Real-Time">
+  <meta name="twitter:description" content="Learn what an AI agent dashboard is and why VidClaw is the best self-hosted ai dashboard open source solution for monitoring autonomous AI systems.">
+  <meta name="twitter:image" content="https://vidclaw.com/img/og-vidclaw-com.png">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://vidclaw.com/blog/ai-agent-dashboard/">
+  <meta property="og:title" content="AI Agent Dashboard: Monitor and Control Your AI Assistants in Real-Time">
+  <meta property="og:description" content="Learn what an AI agent dashboard is and why VidClaw is the best self-hosted ai dashboard open source solution for monitoring autonomous AI systems.">
+  <meta property="og:image" content="https://vidclaw.com/img/og-vidclaw-com.png">
+  <meta property="article:published_time" content="2026-03-03T00:00:00Z">
+  <meta property="article:author" content="woocassh">
+  <meta property="article:tag" content="ai agent dashboard">
+  <meta property="article:tag" content="self-hosted">
+  <meta property="article:tag" content="monitoring">
+  <meta property="article:tag" content="AI agents">
+
+  <!-- JSON-LD Article structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "AI Agent Dashboard: Monitor and Control Your AI Assistants in Real-Time",
+    "description": "Discover what an AI agent dashboard is, why you need one for managing autonomous AI systems, and how VidClaw provides the best self-hosted ai dashboard for real-time monitoring and control.",
+    "image": "https://vidclaw.com/img/og-vidclaw-com.png",
+    "datePublished": "2026-03-03T00:00:00Z",
+    "author": {
+      "@type": "Person",
+      "name": "woocassh",
+      "url": "https://x.com/woocassh"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "VidClaw",
+      "url": "https://vidclaw.com"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://vidclaw.com/blog/ai-agent-dashboard/"
+    }
+  }
+  </script>
+
+  <!-- JSON-LD FAQPage structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is an AI agent dashboard?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "An AI agent dashboard is a visual interface that allows you to monitor, control, and manage autonomous AI agents in real-time. It provides visibility into agent activity, task status, resource usage, and allows you to configure agent behavior without using command-line tools."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why do I need a self-hosted AI dashboard?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A self-hosted AI dashboard keeps your data private and under your control. Unlike cloud-based solutions, self-hosted dashboards like VidClaw run entirely on your infrastructure, ensuring sensitive information never leaves your servers while giving you full customization capabilities."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What features should I look for in an AI agent dashboard?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Key features include real-time activity monitoring, task management (preferably Kanban-style), cost tracking for AI model usage, agent configuration editors, file browsing capabilities, and WebSocket-powered updates for instant feedback without page refreshes."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is VidClaw free to use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, VidClaw is completely free and open source under the MIT license. You can install it on your own server, modify the code, and use it for any purpose without licensing fees or usage restrictions."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does an AI agent dashboard differ from regular monitoring tools?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Traditional monitoring tools focus on system metrics like CPU and memory. An AI agent dashboard is specifically designed for autonomous AI systems, tracking agent-specific metrics like task completion, token usage, model costs, conversation history, and providing tools for configuring agent behavior and personality."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <script async src="https://plausible.io/js/pa-GKT997euCDfQROHoFG713.js"></script>
+  <script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()</script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x26A1;</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root { --bg: #0a0a0f; --surface: #12121a; --border: #1e1e2e; --text: #e4e4e7; --muted: #71717a; --accent: #f97316; }
+    html, body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    nav { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; max-width: 1100px; margin: 0 auto; padding: 1.5rem 2rem; gap: 0.75rem; }
+    .ph-badge { display: flex; align-items: center; }
+    .ph-badge img { border-radius: 4px; }
+    .nav-icons { display: flex; align-items: center; gap: 0.75rem; }
+    .gh-link { color: var(--muted); transition: color 0.2s; }
+    .gh-link:hover { color: var(--text); }
+    nav .brand { font-weight: 800; font-size: 1.2rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+    nav .brand:hover { text-decoration: none; color: var(--accent); }
+    nav .nav-links { display: flex; gap: 1.5rem; font-size: 0.95rem; }
+    nav .nav-links a { color: var(--muted); }
+    nav .nav-links a:hover, nav .nav-links a.active { color: var(--accent); text-decoration: none; }
+
+    .page { max-width: 800px; margin: 0 auto; padding: 2rem 2rem 6rem; }
+    .page h1 { font-size: clamp(2rem, 5vw, 2.5rem); font-weight: 800; margin-bottom: 1rem; background: linear-gradient(135deg, #f97316, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .page h2 { font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1rem; padding-top: 1rem; }
+    .page h3 { font-size: 1.15rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+    .page p, .page li { color: var(--muted); font-size: 1rem; margin-bottom: 1rem; }
+    .page p strong { color: var(--text); }
+    .page ul, .page ol { padding-left: 1.5rem; margin-bottom: 1.5rem; }
+    .page li { margin-bottom: 0.5rem; }
+    .page code { background: var(--surface); border: 1px solid var(--border); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9rem; }
+
+    .article-meta { display: flex; align-items: center; gap: 1rem; color: var(--muted); font-size: 0.9rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .article-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+    .post-tag { font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 100px; background: rgba(249, 115, 22, 0.15); color: var(--accent); }
+    .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+    .back-link:hover { color: var(--accent); text-decoration: none; }
+
+    .feature-list { list-style: none; padding-left: 0; margin: 2rem 0; }
+    .feature-list li { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; transition: border-color 0.2s; }
+    .feature-list li:hover { border-color: var(--accent); }
+    .feature-list li strong { display: block; color: var(--text); font-size: 1.05rem; margin-bottom: 0.25rem; }
+
+    .cta-box { text-align: center; margin: 3rem 0 0; padding: 2.5rem 2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+    .cta-box p { color: var(--muted); margin-bottom: 1rem; }
+    .cta-box .cta-title { font-size: 1.2rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.85rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #ea580c; transform: translateY(-1px); box-shadow: 0 8px 30px rgba(249, 115, 22, 0.3); text-decoration: none; }
+
+    .faq-section { margin: 3rem 0; }
+    .faq-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; }
+    .faq-item h3 { color: var(--text); margin-bottom: 0.75rem; font-size: 1.1rem; }
+    .faq-item p { margin-bottom: 0; }
+
+    .related-posts { margin: 3rem 0; }
+    .related-posts h2 { margin-bottom: 1.5rem; }
+    .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+    .related-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; transition: border-color 0.2s; }
+    .related-card:hover { border-color: var(--accent); text-decoration: none; }
+    .related-card h4 { color: var(--text); font-size: 1rem; margin-bottom: 0.5rem; }
+    .related-card p { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+    footer { text-align: center; padding: 3rem 2rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="brand">&#x26A1; VidClaw</a>
+    <div class="nav-links">
+      <a href="/features">Features</a>
+      <a href="/install">Install</a>
+      <a href="/blog" class="active">Blog</a>
+      <a href="/changelog">Changelog</a>
+    </div>
+    <div class="nav-icons">
+      <div class="ph-badge">
+        <a href="https://www.producthunt.com/products/vidclaw?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-vidclaw" target="_blank" rel="noopener noreferrer"><img alt="VidClaw on Product Hunt" width="150" height="32" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1080264&amp;theme=dark&amp;t=1771254815882" style="display:block;"></a>
+      </div>
+      <a href="https://github.com/madrzak/vidclaw" target="_blank" rel="noopener noreferrer" class="gh-link" title="View on GitHub"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <a href="/blog" class="back-link">&larr; Back to Blog</a>
+
+    <h1>AI Agent Dashboard: Monitor and Control Your AI Assistants in Real-Time</h1>
+    <div class="article-meta">
+      <span>By <a href="https://x.com/woocassh">woocassh</a></span>
+      <span>March 3, 2026</span>
+      <span>8 min read</span>
+    </div>
+    <div class="article-tags">
+      <span class="post-tag">ai agent dashboard</span>
+      <span class="post-tag">self-hosted</span>
+      <span class="post-tag">monitoring</span>
+      <span class="post-tag">AI agents</span>
+    </div>
+
+    <p>As autonomous AI agents become more capable, the need for proper oversight grows. An <strong>AI agent dashboard</strong> provides the visibility and control you need to manage AI systems that operate independently. Without one, you are essentially running powerful automation with no window into what is actually happening.</p>
+
+    <p>This guide explains what an AI agent dashboard is, why every serious AI deployment needs one, and how to choose the right solution for your needs. We will also show you how <a href="/features">VidClaw</a> delivers exactly what you need as a <strong>self-hosted AI dashboard</strong> that keeps your data private while giving you complete control.</p>
+
+    <h2>What Is an AI Agent Dashboard?</h2>
+
+    <p>An AI agent dashboard is a visual interface designed specifically for monitoring and managing autonomous AI systems. Unlike traditional application dashboards that show server metrics or user analytics, an AI agent dashboard focuses on the unique aspects of AI operations:</p>
+
+    <ul>
+      <li><strong>Agent activity and status</strong> — what is your AI currently doing, and is it healthy?</li>
+      <li><strong>Task management</strong> — what work has been assigned, what is in progress, what is complete?</li>
+      <li><strong>Resource consumption</strong> — how many tokens are being used, what are the costs?</li>
+      <li><strong>Behavior configuration</strong> — how can you adjust how the agent operates?</li>
+      <li><strong>Output review</strong> — what has the agent produced, and is it correct?</li>
+    </ul>
+
+    <p>Think of it as mission control for your AI operations. Just as you would not launch a rocket without telemetry, you should not run autonomous AI agents without proper observability.</p>
+
+    <h2>Why You Need an AI Agent Dashboard</h2>
+
+    <p>Running AI agents from the command line works for experimentation. But once you deploy agents for real work, the limitations become painful fast.</p>
+
+    <h3>Visibility Into Agent Behavior</h3>
+
+    <p>Autonomous AI agents make decisions on their own. Without a dashboard, understanding what your agent did overnight means digging through log files and reconstructing events manually. A proper <strong>AI agent dashboard</strong> shows you a clear timeline of activity, decisions made, and outputs produced — at a glance.</p>
+
+    <h3>Cost Control and Token Tracking</h3>
+
+    <p>AI model usage adds up quickly. A single runaway task can burn through your monthly budget in hours. Dashboard-based cost tracking shows you exactly which tasks are consuming tokens, which models are being used, and whether you are staying within limits. This is not optional — it is essential for any production deployment.</p>
+
+    <h3>Task Assignment Without Code Changes</h3>
+
+    <p>Assigning new work to an AI agent should not require editing configuration files. A dashboard with visual task management lets you create, prioritize, and assign tasks through a simple interface. Drag a card to reprioritize. Click to add details. No terminal required.</p>
+
+    <h3>Configuration Management</h3>
+
+    <p>AI agents have personalities and operating instructions that need tuning over time. A dashboard interface for editing these settings — with version history and easy rollback — makes iteration practical instead of risky.</p>
+
+    <h2>Key Features to Look for in an AI Agent Dashboard</h2>
+
+    <p>Not all dashboards are created equal. When evaluating options, look for these capabilities:</p>
+
+    <ul class="feature-list">
+      <li>
+        <strong>Real-Time Updates</strong>
+        WebSocket-powered interfaces that show changes instantly. Polling-based dashboards that refresh every few seconds feel sluggish and miss important events.
+      </li>
+      <li>
+        <strong>Visual Task Management</strong>
+        Kanban boards or similar interfaces that let you see task status at a glance and reorganize work through drag-and-drop. Treating AI tasks like software development tasks just works.
+      </li>
+      <li>
+        <strong>Cost and Usage Analytics</strong>
+        Per-model token tracking, daily and monthly summaries, and ideally rate limit visibility. You need to know where your AI budget is going.
+      </li>
+      <li>
+        <strong>Agent Configuration Editor</strong>
+        The ability to edit your agent's instructions, personality, and capabilities through the browser with version control so you can roll back changes.
+      </li>
+      <li>
+        <strong>File and Output Browser</strong>
+        AI agents produce artifacts. A built-in file browser with preview capabilities lets you review outputs without SSH-ing into your server.
+      </li>
+      <li>
+        <strong>Activity History</strong>
+        Calendar or timeline views showing what your agent worked on and when. Essential for understanding patterns and debugging issues.
+      </li>
+    </ul>
+
+    <h2>Self-Hosted vs. Cloud AI Dashboards</h2>
+
+    <p>You have two main options for AI agent dashboards: cloud-hosted services or self-hosted solutions. Each has tradeoffs.</p>
+
+    <h3>Cloud-Hosted Dashboards</h3>
+
+    <p>Cloud solutions are convenient — sign up and start using them immediately. But they come with significant downsides for AI agent management:</p>
+
+    <ul>
+      <li><strong>Data privacy concerns</strong> — your agent's activities, outputs, and configuration all live on someone else's servers</li>
+      <li><strong>Ongoing costs</strong> — subscription fees on top of your AI model costs</li>
+      <li><strong>Vendor lock-in</strong> — migrating away means losing your history and configuration</li>
+      <li><strong>Limited customization</strong> — you get what the vendor provides</li>
+    </ul>
+
+    <h3>Self-Hosted AI Dashboard Benefits</h3>
+
+    <p>A <strong>self-hosted AI dashboard</strong> like VidClaw runs entirely on your infrastructure. Your data never leaves your server. You control updates, customization, and access. There are no subscription fees — just your existing server costs.</p>
+
+    <p>For anyone running AI agents on sensitive tasks or in regulated environments, self-hosting is often the only viable option. Even for personal use, the privacy and control benefits are significant.</p>
+
+    <h2>How VidClaw Delivers the Complete AI Agent Dashboard Experience</h2>
+
+    <p><a href="https://github.com/madrzak/vidclaw">VidClaw</a> is an <strong>AI dashboard open source</strong> project built specifically for managing <a href="/blog/what-is-openclaw/">OpenClaw</a> AI agents. It provides everything you need in a clean, modern interface that runs entirely on your own server.</p>
+
+    <ul class="feature-list">
+      <li>
+        <strong>Kanban Task Board</strong>
+        Visual task management with Backlog, Todo, In Progress, and Done columns. Your AI agent automatically picks up tasks you create — no configuration required.
+      </li>
+      <li>
+        <strong>Real-Time Activity Feed</strong>
+        WebSocket-powered updates show you exactly what your agent is doing as it happens. No refresh needed.
+      </li>
+      <li>
+        <strong>AI Cost Tracking</strong>
+        Per-model token usage with daily and monthly summaries. Rate limit progress bars show you exactly where you stand.
+      </li>
+      <li>
+        <strong>Soul Editor</strong>
+        Edit your agent's personality and instructions through a full-featured editor with version history and one-click rollback.
+      </li>
+      <li>
+        <strong>Skills Manager</strong>
+        Browse, enable, and configure the capabilities available to your agent. Create custom skills for specialized workflows.
+      </li>
+      <li>
+        <strong>Content Browser</strong>
+        View workspace files with markdown preview and syntax highlighting. Review what your agent produced without leaving the dashboard.
+      </li>
+      <li>
+        <strong>Activity Calendar</strong>
+        Monthly view showing what your agent worked on each day. Click any day to see the detailed timeline.
+      </li>
+    </ul>
+
+    <p>VidClaw installs in minutes with a single setup script, binds to localhost only for security, and requires no external dependencies beyond Node.js. Access it securely via SSH tunnel from anywhere.</p>
+
+    <h2>Getting Started with Your AI Agent Dashboard</h2>
+
+    <p>Setting up VidClaw as your self-hosted AI dashboard takes about five minutes:</p>
+
+    <ol>
+      <li><strong>Clone the repository:</strong> <code>git clone https://github.com/madrzak/vidclaw</code></li>
+      <li><strong>Run setup:</strong> <code>cd vidclaw && ./setup.sh</code></li>
+      <li><strong>Connect via SSH tunnel:</strong> <code>ssh -L 3333:localhost:3333 user@your-server</code></li>
+      <li><strong>Open your browser:</strong> Navigate to <code>localhost:3333</code></li>
+    </ol>
+
+    <p>For detailed instructions, see our <a href="/blog/openclaw-dashboard-setup-guide/">complete setup guide</a>.</p>
+
+    <div class="faq-section">
+      <h2>Frequently Asked Questions</h2>
+
+      <div class="faq-item">
+        <h3>What is an AI agent dashboard?</h3>
+        <p>An AI agent dashboard is a visual interface that allows you to monitor, control, and manage autonomous AI agents in real-time. It provides visibility into agent activity, task status, resource usage, and allows you to configure agent behavior without using command-line tools.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Why do I need a self-hosted AI dashboard?</h3>
+        <p>A self-hosted AI dashboard keeps your data private and under your control. Unlike cloud-based solutions, self-hosted dashboards like VidClaw run entirely on your infrastructure, ensuring sensitive information never leaves your servers while giving you full customization capabilities.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>What features should I look for in an AI agent dashboard?</h3>
+        <p>Key features include real-time activity monitoring, task management (preferably Kanban-style), cost tracking for AI model usage, agent configuration editors, file browsing capabilities, and WebSocket-powered updates for instant feedback without page refreshes.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Is VidClaw free to use?</h3>
+        <p>Yes, VidClaw is completely free and open source under the MIT license. You can install it on your own server, modify the code, and use it for any purpose without licensing fees or usage restrictions.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How does an AI agent dashboard differ from regular monitoring tools?</h3>
+        <p>Traditional monitoring tools focus on system metrics like CPU and memory. An AI agent dashboard is specifically designed for autonomous AI systems, tracking agent-specific metrics like task completion, token usage, model costs, conversation history, and providing tools for configuring agent behavior and personality.</p>
+      </div>
+    </div>
+
+    <div class="related-posts">
+      <h2>Related Posts</h2>
+      <div class="related-grid">
+        <a href="/blog/what-is-openclaw/" class="related-card">
+          <h4>What is OpenClaw?</h4>
+          <p>Learn about the open-source AI agent framework that VidClaw manages.</p>
+        </a>
+        <a href="/blog/managing-ai-agents-with-kanban/" class="related-card">
+          <h4>Managing AI Agents with Kanban</h4>
+          <p>Why visual task management changes everything for AI workflows.</p>
+        </a>
+        <a href="/blog/7-features-that-make-vidclaw-your-ai-command-center/" class="related-card">
+          <h4>7 Features That Make VidClaw Your AI Command Center</h4>
+          <p>A deep dive into what makes VidClaw the best OpenClaw dashboard.</p>
+        </a>
+      </div>
+    </div>
+
+    <div class="cta-box">
+      <p class="cta-title">Ready to take control of your AI agents?</p>
+      <p>VidClaw is free, open-source, and installs in 60 seconds.</p>
+      <a href="/install" class="btn btn-primary">Install VidClaw &rarr;</a>
+    </div>
+  </div>
+
+  <footer>
+    <p>Built by <a href="https://x.com/woocassh">woocassh</a> · <a href="https://github.com/madrzak/vidclaw">GitHub</a> · <a href="/features">Features</a> · <a href="/install">Install</a> · <a href="/blog">Blog</a> · <a href="/changelog">Changelog</a> · MIT License</p>
+  </footer>
+
+</body>
+</html>

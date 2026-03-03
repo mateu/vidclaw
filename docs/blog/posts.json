@@ -1,5 +1,45 @@
 [
   {
+    "slug": "ai-agent-dashboard",
+    "title": "AI Agent Dashboard: Monitor and Control Your AI Assistants in Real-Time",
+    "date": "2026-03-03",
+    "author": "woocassh",
+    "excerpt": "Discover what an AI agent dashboard is, why you need one for managing autonomous AI systems, and how VidClaw provides the best self-hosted AI dashboard for real-time monitoring.",
+    "tags": ["ai agent dashboard", "self-hosted", "monitoring", "AI agents"],
+    "readingTime": "8 min read",
+    "gradient": "linear-gradient(135deg, #6366f1, #8b5cf6)"
+  },
+  {
+    "slug": "how-to-manage-ai-agents",
+    "title": "How to Manage AI Agents: Task Assignment, Monitoring, and Orchestration Guide",
+    "date": "2026-03-03",
+    "author": "woocassh",
+    "excerpt": "Complete guide to managing AI agents effectively. Learn task assignment strategies, monitoring best practices, and AI agent orchestration techniques.",
+    "tags": ["manage ai agents", "ai task automation", "ai agent orchestration", "tutorial"],
+    "readingTime": "9 min read",
+    "gradient": "linear-gradient(135deg, #22c55e, #16a34a)"
+  },
+  {
+    "slug": "claude-agent-management",
+    "title": "Claude Agent Management: Running Anthropic's Claude as an Autonomous AI Agent",
+    "date": "2026-03-03",
+    "author": "woocassh",
+    "excerpt": "Learn how to run Anthropic's Claude as an autonomous AI agent using OpenClaw. Complete guide to setup, best practices, and using VidClaw for management.",
+    "tags": ["claude agent management", "anthropic claude automation", "claude ai agent", "claude autonomous agent"],
+    "readingTime": "9 min read",
+    "gradient": "linear-gradient(135deg, #ec4899, #a855f7)"
+  },
+  {
+    "slug": "ai-agent-kanban-boards",
+    "title": "AI Agent Kanban Boards: Visual Task Management for Autonomous AI Systems",
+    "date": "2026-03-03",
+    "author": "woocassh",
+    "excerpt": "Discover why kanban boards work perfectly for AI agent task management. Learn how visual management improves oversight and workflow control.",
+    "tags": ["ai agent kanban", "ai task board", "visual ai management", "task management"],
+    "readingTime": "7 min read",
+    "gradient": "linear-gradient(135deg, #f97316, #fbbf24)"
+  },
+  {
     "slug": "what-is-openclaw",
     "title": "What is OpenClaw? Open-Source AI Agent Framework Explained",
     "date": "2026-02-24",
