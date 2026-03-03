@@ -1,12 +1,39 @@
+import fs from 'fs';
 import { execFile } from 'child_process';
 
 const AGENT_TIMEOUT_MS = 15 * 60 * 1000;
+
+function resolveOpenclawBin() {
+  const fromEnv = process.env.OPENCLAW_BIN;
+  if (fromEnv) return fromEnv;
+
+  const candidates = [
+    '/home/hunter/openclaw-app/node_modules/.bin/openclaw',
+    '/home/linuxbrew/.linuxbrew/bin/openclaw',
+    '/usr/local/bin/openclaw',
+    '/usr/bin/openclaw',
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return candidate;
+      }
+    } catch {
+      // continue
+    }
+  }
+
+  return 'openclaw'; // PATH fallback
+}
+
+const OPENCLAW_BIN = resolveOpenclawBin();
 
 let deps = null;
 let dispatchScheduled = false;
 let dispatchRunning = false;
 
-function isTaskRunnable(task, now = new Date()) {
+export function isTaskRunnable(task, now = new Date()) {
   if (!task) return false;
   if (task.status === 'in-progress' && !task.pickedUp) return true;
   if (task.status !== 'todo') return false;
@@ -40,15 +67,22 @@ function makeRunPrompt(task) {
   ].filter(Boolean).join('\n\n');
 }
 
-function parseAgentResult(stdout, stderr) {
+export function parseAgentResult(stdout, stderr) {
   const out = (stdout || '').trim();
   if (!out) return (stderr || '').trim() || 'Agent completed with no output.';
   try {
     const parsed = JSON.parse(out);
     if (typeof parsed === 'string') return parsed;
+
+    // Preferred: OpenClaw run envelope payload text
+    const payloadText = parsed?.result?.payloads?.find?.(p => typeof p?.text === 'string')?.text;
+    if (typeof payloadText === 'string' && payloadText.trim()) return payloadText.trim();
+
+    // Common alternates
     if (typeof parsed?.reply === 'string') return parsed.reply;
     if (typeof parsed?.reply?.text === 'string') return parsed.reply.text;
     if (typeof parsed?.text === 'string') return parsed.text;
+    if (typeof parsed?.summary === 'string') return parsed.summary;
   } catch {
     // fall through
   }
@@ -57,7 +91,7 @@ function parseAgentResult(stdout, stderr) {
 
 function runTaskAgent(task, callback) {
   const prompt = makeRunPrompt(task);
-  execFile('openclaw', ['agent', '--json', '--message', prompt], {
+  execFile(OPENCLAW_BIN, ['agent', '--agent', 'main', '--json', '--message', prompt], {
     timeout: AGENT_TIMEOUT_MS,
     maxBuffer: 2 * 1024 * 1024,
   }, (err, stdout, stderr) => {
@@ -195,21 +229,24 @@ function startTaskRun(taskId) {
   return true;
 }
 
+export function selectRunnableTasks(tasks, { maxConcurrent = 1, now = new Date() } = {}) {
+  const activeCount = tasks.filter(t => t.status === 'in-progress' && t.pickedUp).length;
+  const remainingSlots = Math.max(0, maxConcurrent - activeCount);
+  if (remainingSlots <= 0) return [];
+  return tasks
+    .filter(t => isTaskRunnable(t, now))
+    .sort(sortRunnableTasks)
+    .slice(0, remainingSlots);
+}
+
 function dispatchOnce() {
   if (!deps) return;
   const { readTasks, readSettings } = deps;
   const tasks = readTasks();
   const settings = readSettings();
   const maxConcurrent = settings.maxConcurrent || 1;
-  const activeCount = tasks.filter(t => t.status === 'in-progress' && t.pickedUp).length;
-  const remainingSlots = Math.max(0, maxConcurrent - activeCount);
-  if (remainingSlots <= 0) return;
 
-  const now = new Date();
-  const runnable = tasks
-    .filter(t => isTaskRunnable(t, now))
-    .sort(sortRunnableTasks)
-    .slice(0, remainingSlots);
+  const runnable = selectRunnableTasks(tasks, { maxConcurrent, now: new Date() });
 
   for (const task of runnable) {
     startTaskRun(task.id);
