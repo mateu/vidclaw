@@ -6,11 +6,29 @@ export interface Attachment {
   addedAt: string
 }
 
+export type ExecutionState = "queued" | "in-progress" | "completed" | "failed" | "canceled" | "timeout"
+
 export interface RunHistoryEntry {
   completedAt: string
   startedAt: string | null
   result: string | null
   error: string | null
+  status?: ExecutionState
+  reason?: string | null
+  message?: string | null
+  updatedAt?: string | null
+  subagentId?: string | null
+  sessionId?: string | null
+}
+
+export interface ExecutionTransition {
+  at: string
+  from: ExecutionState | null
+  to: ExecutionState
+  reason: string | null
+  message: string | null
+  actor: "user" | "bot" | "system" | "dashboard"
+  subagentId?: string | null
 }
 
 export interface Task {
@@ -40,6 +58,8 @@ export interface Task {
   attachments: Attachment[]
   previousStatus: string | null
   archivedAt: string | null
+  executionState?: ExecutionState | null
+  executionTransitions?: ExecutionTransition[]
 }
 
 export interface CreateTaskRequest {

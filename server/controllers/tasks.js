@@ -5,10 +5,12 @@ import { broadcast } from '../broadcast.js';
 import { isoToDateInTz } from '../lib/timezone.js';
 import { WORKSPACE, __dirname } from '../config.js';
 import { computeNextRun, computeFutureRuns } from '../lib/schedule.js';
+import { recoverStaleTasks } from '../lib/taskRecovery.js';
 import { getKnownChannelIds } from './channels.js';
 
 export function listTasks(req, res) {
   let tasks = readTasks();
+  for (const task of tasks) normalizeExecutionFields(task);
   const includeArchived = req.query.includeArchived === 'true';
   if (!includeArchived) tasks = tasks.filter(t => t.status !== 'archived');
   // Filter by channel if ?channel= query param is provided
@@ -25,6 +27,57 @@ function validateChannel(channel) {
   const known = getKnownChannelIds();
   if (!known.includes(channel)) return `Unknown channel "${channel}". Valid: ${known.join(', ')}`;
   return null;
+}
+
+function recoverTasksIfNeeded(tasks) {
+  const recovery = recoverStaleTasks(tasks, { logActivity, recordExecutionTransition });
+  if (!recovery.changed) return recovery;
+  writeTasks(tasks);
+  broadcast('tasks', tasks.filter(t => t.status !== 'archived'));
+  return recovery;
+}
+
+const EXECUTION_STATES = ['queued', 'in-progress', 'completed', 'failed', 'canceled', 'timeout'];
+const TERMINAL_EXECUTION_STATES = new Set(['completed', 'failed', 'canceled', 'timeout']);
+const BLOCKING_TERMINAL_STATES = new Set(['failed', 'canceled', 'timeout']);
+
+function normalizeExecutionFields(task) {
+  if (!Array.isArray(task.executionTransitions)) task.executionTransitions = [];
+  if (task.executionState && !EXECUTION_STATES.includes(task.executionState)) task.executionState = null;
+  if (task.executionState === undefined) task.executionState = null;
+}
+
+function getCanonicalTerminalState(task) {
+  normalizeExecutionFields(task);
+  if (task.executionState && TERMINAL_EXECUTION_STATES.has(task.executionState)) return task.executionState;
+  for (let i = task.executionTransitions.length - 1; i >= 0; i -= 1) {
+    const to = task.executionTransitions[i]?.to;
+    if (to && TERMINAL_EXECUTION_STATES.has(to)) return to;
+  }
+  return null;
+}
+
+function shouldIgnoreCompletion(task) {
+  const terminal = getCanonicalTerminalState(task);
+  return !!terminal && BLOCKING_TERMINAL_STATES.has(terminal);
+}
+
+function recordExecutionTransition(task, toState, meta = {}) {
+  if (!EXECUTION_STATES.includes(toState)) return;
+  normalizeExecutionFields(task);
+  const fromState = task.executionState || null;
+  const at = meta.at || new Date().toISOString();
+  task.executionTransitions.push({
+    at,
+    from: fromState,
+    to: toState,
+    reason: meta.reason || null,
+    message: meta.message || null,
+    actor: meta.actor || 'system',
+    subagentId: meta.subagentId || task.subagentId || null,
+  });
+  task.executionState = toState;
+  task.updatedAt = at;
 }
 
 export function createTask(req, res) {
@@ -53,6 +106,8 @@ export function createTask(req, res) {
     order: req.body.order ?? tasks.filter(t => t.status === (req.body.status || 'backlog')).length,
     source: req.body.source || null,
     sourceMessageId: req.body.sourceMessageId || null,
+    executionState: null,
+    executionTransitions: [],
   };
   tasks.push(task);
   writeTasks(tasks);
@@ -88,6 +143,16 @@ export function createTaskFromConversation(req, res) {
     sourceMessageId: req.body.sourceMessageId || null,
     subagentId: req.body.subagentId || null,
     pickedUp: autoStart ? true : false,
+    executionState: autoStart ? 'in-progress' : null,
+    executionTransitions: autoStart ? [{
+      at: now,
+      from: null,
+      to: 'in-progress',
+      reason: 'auto_start',
+      message: 'Task auto-started from conversation',
+      actor: 'bot',
+      subagentId: req.body.subagentId || null,
+    }] : [],
   };
   tasks.push(task);
   writeTasks(tasks);
@@ -149,9 +214,10 @@ export function runTask(req, res) {
   const tasks = readTasks();
   const idx = tasks.findIndex(t => t.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  const now = new Date().toISOString();
   tasks[idx].status = 'in-progress';
-  tasks[idx].startedAt = new Date().toISOString();
-  tasks[idx].updatedAt = new Date().toISOString();
+  tasks[idx].startedAt = now;
+  recordExecutionTransition(tasks[idx], 'queued', { at: now, actor: 'user', reason: 'run_requested', message: 'Task queued for execution' });
   writeTasks(tasks);
   logActivity('user', 'task_run', { taskId: req.params.id, title: tasks[idx].title });
   broadcast('tasks', tasks);
@@ -160,6 +226,7 @@ export function runTask(req, res) {
 
 export function getTaskQueue(req, res) {
   const tasks = readTasks();
+  const recovery = recoverTasksIfNeeded(tasks);
   const now = new Date();
   const queue = tasks.filter(t => {
     if (t.status === 'in-progress' && !t.pickedUp) return true;
@@ -189,18 +256,39 @@ export function getTaskQueue(req, res) {
 
   const staleCount = queue.filter(t => t.scheduledAt && new Date(t.scheduledAt) <= now).length;
   const limitedQueue = req.query.limit === 'capacity' ? queue.slice(0, remainingSlots) : queue;
-  res.json({ tasks: limitedQueue, maxConcurrent, activeCount, remainingSlots, staleCount });
+  res.json({
+    tasks: limitedQueue,
+    maxConcurrent,
+    activeCount,
+    remainingSlots,
+    staleCount,
+    recoveredOrphans: recovery.recoveredOrphans || 0,
+    recoveredStale: recovery.recoveredStale || 0,
+  });
 }
 
 export function pickupTask(req, res) {
   const tasks = readTasks();
+  recoverTasksIfNeeded(tasks);
   const idx = tasks.findIndex(t => t.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
+
+  if (tasks[idx].status === 'in-progress' && tasks[idx].pickedUp) {
+    return res.status(409).json({ error: 'Task is already picked up by an active worker' });
+  }
+
+  const now = new Date().toISOString();
   tasks[idx].pickedUp = true;
   tasks[idx].status = 'in-progress';
-  tasks[idx].startedAt = tasks[idx].startedAt || new Date().toISOString();
-  tasks[idx].updatedAt = new Date().toISOString();
+  tasks[idx].startedAt = tasks[idx].startedAt || now;
   if (req.body.subagentId) tasks[idx].subagentId = req.body.subagentId;
+  recordExecutionTransition(tasks[idx], 'in-progress', {
+    at: now,
+    actor: 'bot',
+    reason: 'picked_up',
+    message: 'Worker picked up task',
+    subagentId: req.body.subagentId || tasks[idx].subagentId || null,
+  });
   writeTasks(tasks);
   logActivity('bot', 'task_pickup', { taskId: req.params.id, title: tasks[idx].title, subagentId: req.body.subagentId || null });
   broadcast('tasks', tasks);
@@ -214,19 +302,53 @@ export function completeTask(req, res) {
   const now = new Date().toISOString();
   const hasError = !!req.body.error;
 
+  if (!hasError && shouldIgnoreCompletion(tasks[idx])) {
+    const terminalState = getCanonicalTerminalState(tasks[idx]);
+    recordExecutionTransition(tasks[idx], terminalState, {
+      at: now,
+      actor: 'bot',
+      reason: 'stale_completion_ignored',
+      message: 'Ignored late completion after terminal state: ' + terminalState,
+    });
+    writeTasks(tasks);
+    logActivity('bot', 'task_completed', {
+      taskId: req.params.id,
+      title: tasks[idx].title,
+      hasError: false,
+      result: null,
+      error: null,
+      ignored: true,
+      ignoredReason: 'stale_completion_after_' + terminalState,
+    });
+    broadcast('tasks', tasks);
+    return res.json(tasks[idx]);
+  }
+
   // If recurring, save run to history and reschedule instead of marking done
   if (tasks[idx].schedule && tasks[idx].scheduleEnabled !== false) {
     if (!Array.isArray(tasks[idx].runHistory)) tasks[idx].runHistory = [];
     tasks[idx].runHistory.push({
       completedAt: now,
       startedAt: tasks[idx].startedAt,
+      updatedAt: now,
+      status: hasError ? 'failed' : 'completed',
+      reason: hasError ? 'task_error' : 'task_completed',
+      message: req.body.error || req.body.result || null,
       result: req.body.result || null,
       error: req.body.error || null,
+      subagentId: tasks[idx].subagentId || null,
+      sessionId: tasks[idx].subagentId || null,
+    });
+    recordExecutionTransition(tasks[idx], hasError ? 'failed' : 'completed', {
+      at: now,
+      actor: 'bot',
+      reason: hasError ? 'task_error' : 'task_completed',
+      message: req.body.error || req.body.result || null,
     });
     tasks[idx].status = 'todo';
     tasks[idx].scheduledAt = computeNextRun(tasks[idx].schedule);
-    tasks[idx].result = req.body.result || null;
-    tasks[idx].error = req.body.error || null;
+    tasks[idx].result = hasError ? null : (req.body.result || null);
+    tasks[idx].error = hasError ? (req.body.error || null) : null;
     tasks[idx].startedAt = null;
     tasks[idx].completedAt = null;
     tasks[idx].subagentId = null;
@@ -235,11 +357,16 @@ export function completeTask(req, res) {
   } else {
     tasks[idx].status = 'done';
     tasks[idx].completedAt = now;
-    tasks[idx].updatedAt = now;
-    tasks[idx].result = req.body.result || null;
+    tasks[idx].result = hasError ? null : (req.body.result || null);
+    tasks[idx].error = hasError ? (req.body.error || null) : null;
     tasks[idx].subagentId = null;
     tasks[idx].pickedUp = false;
-    if (hasError) tasks[idx].error = req.body.error;
+    recordExecutionTransition(tasks[idx], hasError ? 'failed' : 'completed', {
+      at: now,
+      actor: 'bot',
+      reason: hasError ? 'task_error' : 'task_completed',
+      message: req.body.error || req.body.result || null,
+    });
   }
   writeTasks(tasks);
   const resultSnippet = (req.body.result || '').slice(0, 500) || null;
@@ -247,6 +374,54 @@ export function completeTask(req, res) {
   logActivity('bot', 'task_completed', { taskId: req.params.id, title: tasks[idx].title, hasError, result: resultSnippet, error: errorSnippet });
   broadcast('tasks', tasks);
   res.json(tasks[idx]);
+}
+
+export function cancelTask(req, res) {
+  const tasks = readTasks();
+  const idx = tasks.findIndex(t => t.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Task not found' });
+
+  const task = tasks[idx];
+  if (task.status !== 'in-progress' && !task.pickedUp && !task.subagentId) {
+    return res.status(400).json({ error: 'Task is not currently running' });
+  }
+
+  const now = new Date().toISOString();
+  if (!Array.isArray(task.runHistory)) task.runHistory = [];
+  task.runHistory.push({
+    completedAt: now,
+    startedAt: task.startedAt || null,
+    updatedAt: now,
+    status: 'canceled',
+    reason: 'user_canceled',
+    message: 'Cancelled by user',
+    result: null,
+    error: 'Cancelled by user',
+    subagentId: task.subagentId || null,
+    sessionId: task.subagentId || null,
+  });
+
+  recordExecutionTransition(task, 'canceled', {
+    at: now,
+    actor: 'user',
+    reason: 'user_canceled',
+    message: 'Cancelled by user',
+  });
+  task.status = task.schedule ? 'todo' : 'backlog';
+  if (task.schedule && task.scheduleEnabled !== false) {
+    task.scheduledAt = computeNextRun(task.schedule);
+  }
+  task.error = 'Cancelled by user';
+  task.result = null;
+  task.startedAt = null;
+  task.completedAt = null;
+  task.subagentId = null;
+  task.pickedUp = false;
+
+  writeTasks(tasks);
+  logActivity('user', 'task_cancelled', { taskId: task.id, title: task.title });
+  broadcast('tasks', tasks);
+  res.json(task);
 }
 
 export function bulkDeleteTasks(req, res) {
@@ -366,6 +541,7 @@ export function getRunHistory(req, res) {
 
 export function getCapacity(req, res) {
   const tasks = readTasks();
+  recoverTasksIfNeeded(tasks);
   const settings = readSettings();
   const maxConcurrent = settings.maxConcurrent || 1;
   const activeCount = tasks.filter(t => t.status === 'in-progress' && t.pickedUp).length;
@@ -379,51 +555,91 @@ export function reportStatusCheck(req, res) {
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
 
   const { status, message } = req.body;
-  const validStatuses = ['running', 'completed', 'failed', 'timeout'];
-  if (!status || !validStatuses.includes(status)) {
+  const normalized = status === 'running' ? 'in-progress' : status;
+  const validStatuses = ['in-progress', 'completed', 'failed', 'timeout'];
+  if (!normalized || !validStatuses.includes(normalized)) {
     return res.status(400).json({ error: 'status must be one of: ' + validStatuses.join(', ') });
   }
 
-  logActivity('bot', 'task_status_check', { taskId: req.params.id, title: tasks[idx].title, status, message: message || null });
+  logActivity('bot', 'task_status_check', { taskId: req.params.id, title: tasks[idx].title, status: normalized, message: message || null });
 
-  if (status === 'completed' || status === 'failed' || status === 'timeout') {
+  if (normalized === 'completed' || normalized === 'failed' || normalized === 'timeout') {
     const now = new Date().toISOString();
-    const errorMsg = status === 'completed' ? null : (message || (status === 'timeout' ? 'Task timed out' : 'Task failed'));
+
+    if (normalized === 'completed' && shouldIgnoreCompletion(tasks[idx])) {
+      const terminalState = getCanonicalTerminalState(tasks[idx]);
+      recordExecutionTransition(tasks[idx], terminalState, {
+        at: now,
+        actor: 'bot',
+        reason: 'stale_completion_ignored',
+        message: message || ('Ignored late completion after terminal state: ' + terminalState),
+      });
+      writeTasks(tasks);
+      broadcast('tasks', tasks);
+      return res.json(tasks[idx]);
+    }
+
+    const errorMsg = normalized === 'completed' ? null : (message || (normalized === 'timeout' ? 'Task timed out' : 'Task failed'));
 
     if (tasks[idx].schedule && tasks[idx].scheduleEnabled !== false) {
       if (!Array.isArray(tasks[idx].runHistory)) tasks[idx].runHistory = [];
       tasks[idx].runHistory.push({
         completedAt: now,
         startedAt: tasks[idx].startedAt,
-        result: status === 'completed' ? (message || null) : null,
+        updatedAt: now,
+        status: normalized,
+        reason: normalized === 'timeout' ? 'task_timeout' : (normalized === 'failed' ? 'task_failed' : 'task_completed'),
+        message: message || errorMsg,
+        result: normalized === 'completed' ? (message || null) : null,
         error: errorMsg,
+        subagentId: tasks[idx].subagentId || null,
+        sessionId: tasks[idx].subagentId || null,
+      });
+      recordExecutionTransition(tasks[idx], normalized, {
+        at: now,
+        actor: 'bot',
+        reason: normalized === 'timeout' ? 'task_timeout' : (normalized === 'failed' ? 'task_failed' : 'task_completed'),
+        message: message || errorMsg,
       });
       tasks[idx].status = 'todo';
       tasks[idx].scheduledAt = computeNextRun(tasks[idx].schedule);
-      tasks[idx].result = status === 'completed' ? (message || null) : null;
+      tasks[idx].result = normalized === 'completed' ? (message || null) : null;
       tasks[idx].error = errorMsg;
       tasks[idx].startedAt = null;
       tasks[idx].completedAt = null;
       tasks[idx].subagentId = null;
       tasks[idx].pickedUp = false;
-      tasks[idx].updatedAt = now;
     } else {
       tasks[idx].status = 'done';
       tasks[idx].completedAt = now;
-      tasks[idx].updatedAt = now;
-      tasks[idx].result = status === 'completed' ? (message || null) : null;
+      tasks[idx].result = normalized === 'completed' ? (message || null) : null;
       tasks[idx].error = errorMsg;
       tasks[idx].subagentId = null;
       tasks[idx].pickedUp = false;
+      recordExecutionTransition(tasks[idx], normalized, {
+        at: now,
+        actor: 'bot',
+        reason: normalized === 'timeout' ? 'task_timeout' : (normalized === 'failed' ? 'task_failed' : 'task_completed'),
+        message: message || errorMsg,
+      });
     }
     writeTasks(tasks);
-    if (status !== 'completed') logActivity('bot', 'task_timeout', { taskId: req.params.id, title: tasks[idx].title, message: message || null });
+    if (normalized !== 'completed') logActivity('bot', 'task_timeout', { taskId: req.params.id, title: tasks[idx].title, message: message || null });
     broadcast('tasks', tasks);
     return res.json(tasks[idx]);
   }
 
-  // status === 'running' — just log, no state change
-  res.json({ ok: true, status: 'running' });
+  // in-progress heartbeat/status check
+  const now = new Date().toISOString();
+  recordExecutionTransition(tasks[idx], 'in-progress', {
+    at: now,
+    actor: 'bot',
+    reason: 'status_check',
+    message: message || 'Still running',
+  });
+  writeTasks(tasks);
+  broadcast('tasks', tasks);
+  res.json({ ok: true, status: 'in-progress' });
 }
 
 export function toggleSchedule(req, res) {

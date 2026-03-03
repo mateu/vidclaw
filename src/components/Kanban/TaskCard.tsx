@@ -3,8 +3,9 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
 import { formatTime, formatDuration, formatRelativeTime } from '@/lib/time'
+import { getTaskDisplayState, isErrorState, getDisplayMessage } from '@/lib/taskExecution'
 import { useTimezone } from '../TimezoneContext'
-import { GripVertical, Trash2, Play, AlertCircle, Loader2, Clock, CheckCircle2, ChevronDown, ChevronUp, FileText, Timer, Paperclip, MessageCircle } from 'lucide-react'
+import { GripVertical, Trash2, Play, Square, AlertCircle, Loader2, Clock, CheckCircle2, ChevronDown, ChevronUp, FileText, Timer, Paperclip, MessageCircle } from 'lucide-react'
 import { AttachmentBadge, AttachmentThumbnails } from './AttachmentSection'
 import MarkdownRenderer from '../Markdown/MarkdownRenderer'
 import type { Task } from '@/types/api'
@@ -60,12 +61,13 @@ interface TaskCardProps {
   onEdit?: (task: Task) => void
   onView?: (task: Task) => void
   onDelete?: (id: string) => void
+  onCancel?: (id: string) => void
   onRun?: (id: string) => void
   onToggleSchedule?: (id: string, enabled: boolean) => void
   isDragging?: boolean
 }
 
-export default function TaskCard({ task, onEdit, onView, onDelete, onRun, onToggleSchedule, isDragging: isDraggingProp }: TaskCardProps) {
+export default function TaskCard({ task, onEdit, onView, onDelete, onCancel, onRun, onToggleSchedule, isDragging: isDraggingProp }: TaskCardProps) {
   const { timezone } = useTimezone()
   const [expanded, setExpanded] = useState(false)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id, disabled: task.status === 'done' || task.status === 'in-progress' })
@@ -77,7 +79,8 @@ export default function TaskCard({ task, onEdit, onView, onDelete, onRun, onTogg
   const dragging = isDraggingProp || isDragging
   const isInProgress = task.status === 'in-progress'
   const isDone = task.status === 'done'
-  const hasError = !!task.error
+  const displayState = getTaskDisplayState(task)
+  const hasError = isErrorState(displayState) || (!displayState && !!task.error)
   const canRun = task.status === 'backlog' || task.status === 'todo'
   const canEdit = !isDone && !isInProgress
   const hasSchedule = !!task.schedule
@@ -85,8 +88,9 @@ export default function TaskCard({ task, onEdit, onView, onDelete, onRun, onTogg
 
   const skillsList = task.skills && task.skills.length ? task.skills : (task.skill ? [task.skill] : [])
   const duration = isDone ? formatDuration(task.startedAt || task.createdAt, task.completedAt) : null
-  const resultSummary = !hasError ? truncateResult(task.result) : null
-  const hasFullResult = task.result && task.result.length > 120
+  const displayMessage = getDisplayMessage(task, displayState)
+  const resultSummary = !hasError ? truncateResult(displayMessage) : null
+  const hasFullResult = displayMessage && displayMessage.length > 120
   const filePaths = isDone ? extractFilePaths(task.result) : []
 
   const [elapsed, setElapsed] = useState('')
@@ -140,16 +144,16 @@ export default function TaskCard({ task, onEdit, onView, onDelete, onRun, onTogg
           )}
 
           {isDone && !expanded && hasError && (
-            <p className="text-[11px] text-red-400/80 mt-1 line-clamp-2 italic">{truncateResult(task.error, 120)}</p>
+            <p className="text-[11px] text-red-400/80 mt-1 line-clamp-2 italic">{truncateResult(displayMessage, 120)}</p>
           )}
 
           {isDone && expanded && (
             <div className="mt-2">
-              {hasError && (
+              {hasError && displayMessage && (
                 <div className="mb-2">
                   <span className="text-red-400 font-medium text-[11px]">Error:</span>
                   <MarkdownRenderer
-                    content={task.error!}
+                    content={displayMessage}
                     isError={true}
                     showToggle={false}
                     size="xs"
@@ -158,9 +162,9 @@ export default function TaskCard({ task, onEdit, onView, onDelete, onRun, onTogg
                   />
                 </div>
               )}
-              {task.result && (
+              {!hasError && displayMessage && (
                 <MarkdownRenderer
-                  content={task.result}
+                  content={displayMessage}
                   isError={false}
                   showToggle={false}
                   size="xs"
@@ -171,7 +175,7 @@ export default function TaskCard({ task, onEdit, onView, onDelete, onRun, onTogg
           )}
         </div>
         <div className="flex gap-1 shrink-0">
-          {isDone && (task.result || task.error) && (
+          {isDone && displayMessage && (
             <span className="text-muted-foreground/50">
               {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </span>
@@ -188,8 +192,19 @@ export default function TaskCard({ task, onEdit, onView, onDelete, onRun, onTogg
               </button>
             )}
 
+            {isInProgress && onCancel && (
+              <button
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onCancel(task.id) }}
+                onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
+                className="text-muted-foreground hover:text-amber-400"
+                title="Cancel running task"
+              >
+                <Square size={12} />
+              </button>
+            )}
+
             {onDelete && (
-              <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(task.id) }} onPointerDown={(e: React.PointerEvent) => e.stopPropagation()} className="text-muted-foreground hover:text-destructive">
+              <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(task.id) }} onPointerDown={(e: React.PointerEvent) => e.stopPropagation()} className="text-muted-foreground hover:text-destructive" title="Delete task">
                 <Trash2 size={12} />
               </button>
             )}

@@ -155,7 +155,14 @@ export default function Board({ visible = true }: BoardProps) {
   }
 
   async function handleDelete(id: string): Promise<void> {
+    if (!window.confirm('Delete this task? This removes attachments and archives the record.')) return
     await api.tasks.delete(id)
+    invalidateTasks()
+  }
+
+  async function handleCancel(id: string): Promise<void> {
+    if (!window.confirm('Cancel this running task? The task will be kept and marked as cancelled.')) return
+    await api.tasks.cancel(id)
     invalidateTasks()
   }
 
@@ -235,6 +242,7 @@ export default function Board({ visible = true }: BoardProps) {
                 onEdit={openEdit}
                 onView={openView}
                 onDelete={handleDelete}
+                onCancel={handleCancel}
                 onRun={handleRun}
                 onToggleSchedule={handleToggleSchedule}
                 onBulkArchive={handleBulkArchive}

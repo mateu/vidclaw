@@ -23,6 +23,7 @@ const ACTION_LABELS: Record<string, string> = {
   task_run: 'Started task',
   task_pickup: 'Picked up task',
   task_completed: 'Completed task',
+  task_cancelled: 'Cancelled task',
   task_deleted: 'Deleted task',
 }
 

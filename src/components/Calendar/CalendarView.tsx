@@ -57,6 +57,7 @@ export default function CalendarView() {
   const { timezone } = useTimezone()
 
   async function handleDelete(id: string): Promise<void> {
+    if (!window.confirm('Delete this task? This removes attachments and archives the record.')) return
     await deleteTask.mutateAsync(id)
     queryClient.invalidateQueries({ queryKey: ['calendar'] })
   }
