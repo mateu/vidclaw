@@ -125,7 +125,7 @@ echo
 echo -e "${BOLD}${GREEN}  ⚡ VidClaw is ready${RESET}"
 echo
 SERVER_IP="$(hostname -I 2>/dev/null | awk '{print $1}')" || SERVER_IP=""
-echo -e "  ${DIM}Dashboard${RESET}  http://localhost:${VIDCLAW_PORT:-3333}"
+echo -e "  ${DIM}Dashboard${RESET}  http://${SERVER_IP:-localhost}:${VIDCLAW_PORT:-3333}"
 echo -e "  ${DIM}Directory${RESET}  ${INSTALL_DIR}"
 echo -e "  ${DIM}Commands${RESET}   ./start.sh  ./stop.sh  ./status.sh  ./logs.sh"
 if [[ -n "${SERVER_IP}" ]]; then
