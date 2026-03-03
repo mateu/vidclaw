@@ -6,6 +6,7 @@ import { isoToDateInTz } from '../lib/timezone.js';
 import { WORKSPACE, __dirname } from '../config.js';
 import { computeNextRun, computeFutureRuns } from '../lib/schedule.js';
 import { recoverStaleTasks } from '../lib/taskRecovery.js';
+import { requestTaskDispatch } from '../lib/taskDispatcher.js';
 import { getKnownChannelIds } from './channels.js';
 
 export function listTasks(req, res) {
@@ -221,7 +222,8 @@ export function runTask(req, res) {
   writeTasks(tasks);
   logActivity('user', 'task_run', { taskId: req.params.id, title: tasks[idx].title });
   broadcast('tasks', tasks);
-  res.json({ success: true, message: 'Task queued for execution' });
+  requestTaskDispatch();
+  res.json({ success: true, message: 'Task queued; dispatcher triggered' });
 }
 
 export function getTaskQueue(req, res) {
@@ -373,6 +375,7 @@ export function completeTask(req, res) {
   const errorSnippet = (req.body.error || '').slice(0, 500) || null;
   logActivity('bot', 'task_completed', { taskId: req.params.id, title: tasks[idx].title, hasError, result: resultSnippet, error: errorSnippet });
   broadcast('tasks', tasks);
+  requestTaskDispatch();
   res.json(tasks[idx]);
 }
 
@@ -421,6 +424,7 @@ export function cancelTask(req, res) {
   writeTasks(tasks);
   logActivity('user', 'task_cancelled', { taskId: task.id, title: task.title });
   broadcast('tasks', tasks);
+  requestTaskDispatch();
   res.json(task);
 }
 
@@ -626,6 +630,7 @@ export function reportStatusCheck(req, res) {
     writeTasks(tasks);
     if (normalized !== 'completed') logActivity('bot', 'task_timeout', { taskId: req.params.id, title: tasks[idx].title, message: message || null });
     broadcast('tasks', tasks);
+    requestTaskDispatch();
     return res.json(tasks[idx]);
   }
 

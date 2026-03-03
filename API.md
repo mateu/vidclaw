@@ -10,7 +10,7 @@ All endpoints are served on `localhost:3333`.
 | POST | `/api/tasks` | Create a task |
 | PUT | `/api/tasks/:id` | Update a task |
 | DELETE | `/api/tasks/:id` | Delete a task |
-| POST | `/api/tasks/:id/run` | Mark task for immediate execution |
+| POST | `/api/tasks/:id/run` | Queue task and trigger immediate server-side dispatch (capacity-aware) |
 | POST | `/api/tasks/:id/pickup` | Mark task as picked up by agent |
 | POST | `/api/tasks/:id/complete` | Mark task as done with result |
 | POST | `/api/tasks/:id/cancel` | Cancel a running task (preserve record/history) |
